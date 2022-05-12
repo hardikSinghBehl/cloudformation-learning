@@ -1,0 +1,26 @@
+Description: Cloudformation template to create a private S3 Bucket with dynamically provided input name in `S3BucketName` parameter
+
+Parameters:
+  S3BucketName:
+    Type: String
+    Description: name of the S3 bucket to create
+    AllowedPattern: (?=^.{3,63}$)(?!^(\d+\.)+\d+$)(^(([a-z0-9]|[a-z0-9][a-z0-9\-]*[a-z0-9])\.)*([a-z0-9]|[a-z0-9][a-z0-9\-]*[a-z0-9])$)
+    ConstraintDescription: Name must adhere to the bucket naming convention
+    Default: cloudformation-demonstration-12022022-hardik
+
+Resources:
+  S3Bucket:
+    Type: AWS::S3::Bucket
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
+    Properties:
+      BucketName: !Ref S3BucketName
+      AccessControl: Private
+      Tags:
+        - Key: "Description"
+          Value: Test S3 Bucket being created by a cloudformation template
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
