@@ -1,0 +1,34 @@
+# Cloudformation template to create an EC2 Instance of type t2.micro in ap-south-1 (Mumbai) region, the EC2 Instance will be associated with an EIP and a Security group to allow access to port HTTP port 80
+
+Resources:
+  WebServerInstance:
+    Type: AWS::EC2::Instance
+    Properties:
+      AvailabilityZone: ap-south-1a
+      ImageId: ami-079b5e5b3971bd10d
+      InstanceType: t2.micro
+      SecurityGroups:
+        - !Ref HTTPSecurityGroup
+      UserData:
+        Fn::Base64: !Sub |
+          #!/bin/bash
+          yum update -y
+          yum install -y httpd.x86_64
+          systemctl start httpd.service
+          systemctl enable httpd.service
+          echo '<center><h1>This was created using CloudFormation</h1></center>' > /var/www/html/index.html
+
+  WebServerEIP:
+    Type: AWS::EC2::EIP
+    Properties:
+      InstanceId: !Ref WebServerInstance
+
+  HTTPSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Security group to allow public access on port 80
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 80
+          ToPort: 80
+          CidrIp: 0.0.0.0/0
