@@ -1,4 +1,5 @@
-# Cloudformation template to create an EC2 Instance of type t2.micro in ap-south-1 (Mumbai) region, the EC2 Instance will be associated with an EIP and a Security group to allow access to port HTTP port 80
+Description: |
+  Cloudformation template to create an EC2 Instance of type t2.micro in ap-south-1 (Mumbai) region, the EC2 Instance will be associated with an EIP and a Security group to allow access to port HTTP port 80
 
 Resources:
   WebServerInstance:
@@ -9,6 +10,11 @@ Resources:
       InstanceType: t2.micro
       SecurityGroups:
         - !Ref HTTPSecurityGroup
+      Tags:
+        - Key: "Name"
+          Value: "WebServerInstance"
+        - Key: "Description"
+          Value: "EC2 Instance created using a Cloudformation template to host a basic HTTP Web server"
       UserData:
         Fn::Base64: !Sub |
           #!/bin/bash
