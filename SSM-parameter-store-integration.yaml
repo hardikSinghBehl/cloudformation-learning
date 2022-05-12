@@ -1,0 +1,56 @@
+Description: |
+  Cloudformation template to create an EC2 Instance of default type defined in a custom SSM parameter store in ap-south-1 (Mumbai) region, The latest Amazon Linux 2 AMI id is fetched from a public parameter store, the EC2 Instance will be associated with an EIP and a Security group to allow public access to HTTP port 80
+
+Parameters:
+  InstanceType:
+    Type: AWS::SSM::Parameter::Value<String>
+    Default: /dev/EC2/default/instanceType
+  ImageId:
+    Type: AWS::SSM::Parameter::Value<AWS::EC2::Image::Id>
+    Default: /aws/service/ami-amazon-linux-latest/amzn2-ami-hvm-x86_64-gp2
+  WebServerInstanceAvailabilityZone:
+    Type: String
+    Description: Availability Zone to launch the EC2 instance in
+    AllowedValues:
+      - "ap-south-1a"
+      - "ap-south-1b"
+      - "ap-south-1c"
+    ConstraintDescription: Availability zone must be within the Mumbai (ap-south-1) region
+
+Resources:
+  WebServerInstance:
+    Type: AWS::EC2::Instance
+    Properties:
+      AvailabilityZone: !Ref WebServerInstanceAvailabilityZone
+      ImageId: !Ref ImageId
+      InstanceType: !Ref InstanceType
+      SecurityGroups:
+        - !Ref HTTPSecurityGroup
+      Tags:
+        - Key: "Name"
+          Value: "WebServerInstance-SSM-Integration-POC"
+        - Key: "Description"
+          Value: "EC2 Instance created using a Cloudformation template to host a basic HTTP Web server"
+      UserData:
+        Fn::Base64: !Sub |
+          #!/bin/bash
+          yum update -y
+          yum install -y httpd.x86_64
+          systemctl start httpd.service
+          systemctl enable httpd.service
+          echo '<center><h1>This was created using CloudFormation with the default instanceType and latest AMI fetched from a custom parameter store and a public parameter store respectively</h1></center>' > /var/www/html/index.html
+
+  WebServerEIP:
+    Type: AWS::EC2::EIP
+    Properties:
+      InstanceId: !Ref WebServerInstance
+
+  HTTPSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Security group to allow public access on port 80
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 80
+          ToPort: 80
+          CidrIp: 0.0.0.0/0
