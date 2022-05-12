@@ -1,11 +1,21 @@
 Description: |
   Cloudformation template to create an EC2 Instance of type t2.micro in ap-south-1 (Mumbai) region, the EC2 Instance will be associated with an EIP and a Security group to allow access to port HTTP port 80
 
+Parameters:
+  WebServerInstanceAvailabilityZone:
+    Type: String
+    Description: Availability Zone to launch the EC2 instance in
+    AllowedValues:
+      - "ap-south-1a"
+      - "ap-south-1b"
+      - "ap-south-1c"
+    ConstraintDescription: Availability zone must be within the Mumbai (ap-south-1) region
+
 Resources:
   WebServerInstance:
     Type: AWS::EC2::Instance
     Properties:
-      AvailabilityZone: ap-south-1a
+      AvailabilityZone: !Ref WebServerInstanceAvailabilityZone
       ImageId: ami-079b5e5b3971bd10d
       InstanceType: t2.micro
       SecurityGroups:
