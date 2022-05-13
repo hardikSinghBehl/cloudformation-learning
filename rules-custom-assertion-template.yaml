@@ -1,0 +1,42 @@
+Description: |
+  CloudFormation template that asks for the environment and the instance type using the Parameters. A rule can have an optional condition and one or more assertions
+  These parameters are evaluated using a rule that allows only t2.micro or t2.small instance types to be provisioned if deploying in 'Development' environment
+
+Parameters:
+  ImageId:
+    Type: AWS::SSM::Parameter::Value<AWS::EC2::Image::Id>
+    Default: /aws/service/ami-amazon-linux-latest/amzn2-ami-hvm-x86_64-gp2
+  Environment:
+    Type: String
+    Description: Environment to run web application in.
+    AllowedValues:
+      - "Development"
+      - "Production"
+  InstanceType:
+    Type: String
+    Description: Instance type to be provisioned
+    AllowedValues:
+      - t2.micro
+      - t2.small
+      - m5.large
+      - m5.xlarge
+      - m5.2xlarge
+
+Resources:
+  EC2Instance:
+    Type: AWS::EC2::Instance
+    Properties:
+      AvailabilityZone: ap-south-1a
+      ImageId: !Ref ImageId
+      InstanceType: !Ref InstanceType
+      Tags:
+        - Key: "Name"
+          Value: "EC2-CloudFormation-Rules-POC"
+
+Rules:
+  NonProdEnvironmentOverProvisioning:
+    Description: Only allowing t2.micro and t2.small instance types to be provioned in 'Development' environment
+    RuleCondition: !Equals [!Ref Environment, Development]
+    Assertions:
+      - Assert: !Contains [[t2.small, t2.micro], !Ref InstanceType]
+        AssertDescription: "Only t2.micro and t2.small can be provisioned in Development environment"
