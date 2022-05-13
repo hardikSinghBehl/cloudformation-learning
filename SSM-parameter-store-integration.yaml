@@ -54,3 +54,20 @@ Resources:
           FromPort: 80
           ToPort: 80
           CidrIp: 0.0.0.0/0
+
+Metadata:
+  AWS::CloudFormation::Interface:
+    ParameterGroups:
+      - Label:
+          default: "EC2 Virtual Server Instance Configurations"
+        Parameters:
+          - WebServerInstanceAvailabilityZone
+          - InstanceType
+          - ImageId
+    ParameterLabels:
+      WebServerInstanceAvailabilityZone:
+        default: "Which Availability-Zone in Mumbai region (ap-south-1) should the EC2 Instance be provisioned in?"
+      InstanceType:
+        default: "Which SSM Parameter store key should be used to fetch the Instance type of the EC2 Instance to provision"
+      ImageId:
+        default: "Which SSM Parameter store key should be used to fetch the AMI ID for the EC2 instance to use (Must be of amazon-linux-2 distribution for the userdata to work)"
