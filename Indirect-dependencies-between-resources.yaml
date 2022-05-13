@@ -1,0 +1,66 @@
+Description: |
+  CloudFormation to provision an EC2 Instance and one S3 Bucket. A Web application will be started on the provisioned virtual server using EC2 UserData, the web app internally uses an S3 Bucket [Assumption in POC]. The S3 Bucket will be created before the EC2 Instance is provisioned using the DependsOn Attribute and during deletion will be deleted after the EC2 instance is terminated
+
+Parameters:
+  S3BucketName:
+    Type: String
+    Description: name of the S3 bucket that the web application will be using
+    AllowedPattern: (?=^.{3,63}$)(?!^(\d+\.)+\d+$)(^(([a-z0-9]|[a-z0-9][a-z0-9\-]*[a-z0-9])\.)*([a-z0-9]|[a-z0-9][a-z0-9\-]*[a-z0-9])$)
+    ConstraintDescription: Name must adhere to the bucket naming convention
+  WebServerInstanceAvailabilityZone:
+    Type: String
+    Description: Availability Zone to launch the EC2 instance in
+    AllowedValues:
+      - "ap-south-1a"
+      - "ap-south-1b"
+      - "ap-south-1c"
+    ConstraintDescription: Availability zone must be within the Mumbai (ap-south-1) region
+
+Resources:
+  WebServerInstance:
+    Type: AWS::EC2::Instance
+    Properties:
+      AvailabilityZone: !Ref WebServerInstanceAvailabilityZone
+      ImageId: ami-079b5e5b3971bd10d
+      InstanceType: t2.micro
+      SecurityGroups:
+        - !Ref HTTPSecurityGroup
+      Tags:
+        - Key: "Name"
+          Value: "WebServerInstance"
+        - Key: "Description"
+          Value: "EC2 Instance created using a Cloudformation template to host a basic HTTP Web server"
+      UserData:
+        Fn::Base64: !Sub |
+          #!/bin/bash
+          yum update -y
+          yum install -y httpd.x86_64
+          systemctl start httpd.service
+          systemctl enable httpd.service
+          echo '<center><h1>This Web Application depends on an S3 Bucket which will be created before the underlying virtual server is provisioned by using the DependsOn Attribute</h1></center>' > /var/www/html/index.html
+    DependsOn:
+      - S3Bucket
+
+  S3Bucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Ref S3BucketName
+      AccessControl: Private
+      Tags:
+        - Key: "Description"
+          Value: S3 Bucket created using cloudformation template to be used by hosted Web Application
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+
+  HTTPSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Security group to allow public access on port 80
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 80
+          ToPort: 80
+          CidrIp: 0.0.0.0/0
