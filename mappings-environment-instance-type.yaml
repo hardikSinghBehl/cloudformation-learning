@@ -47,7 +47,9 @@ Resources:
             !Join [
               " ",
               [
-                "EC2 Instance created using a Cloudformation template to host a basic HTTP Web server on",
+                "EC2 Instance created using a Cloudformation template '",
+                !Ref AWS::StackName,
+                "' to host a basic HTTP Web server on",
                 !Ref Environment,
                 "Environment",
               ],
