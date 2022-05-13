@@ -1,0 +1,77 @@
+Description: |
+  Cloudformation template to run a publically accisible simple web application on default HTTP port, the instance type and the availability zone of the underlying virtual server differs with the environment selected. Values of both these variables are known before time hence they are hardcoded in Mappings.
+
+Parameters:
+  Environment:
+    Type: String
+    Description: Environment to run web application in.
+    AllowedValues:
+      - "Development"
+      - "Testing"
+      - "Staging"
+      - "Production"
+  ImageId:
+    Type: AWS::SSM::Parameter::Value<AWS::EC2::Image::Id>
+    Default: /aws/service/ami-amazon-linux-latest/amzn2-ami-hvm-x86_64-gp2
+
+Mappings:
+  Instance:
+    Development:
+      Type: t2.small
+      AvailabilityZone: ap-south-1a
+    Testing:
+      Type: t2.micro
+      AvailabilityZone: ap-south-1a
+    Staging:
+      Type: m5.2xlarge
+      AvailabilityZone: ap-south-1c
+    Production:
+      Type: m5.4xlarge
+      AvailabilityZone: ap-south-1c
+
+Resources:
+  WebServerInstance:
+    Type: AWS::EC2::Instance
+    Properties:
+      AvailabilityZone:
+        !FindInMap [Instance, !Ref Environment, AvailabilityZone]
+      ImageId: !Ref ImageId
+      InstanceType: !FindInMap [Instance, !Ref Environment, Type]
+      SecurityGroups:
+        - !Ref HTTPSecurityGroup
+      Tags:
+        - Key: "Name"
+          Value: !Join ["-", ["WebServerInstance", !Ref Environment]]
+        - Key: "Description"
+          Value:
+            !Join [
+              " ",
+              [
+                "EC2 Instance created using a Cloudformation template to host a basic HTTP Web server on",
+                !Ref Environment,
+                "Environment",
+              ],
+            ]
+      UserData:
+        Fn::Base64: !Sub |
+          #!/bin/bash
+          yum update -y
+          yum install -y httpd.x86_64
+          systemctl start httpd.service
+          systemctl enable httpd.service
+          echo '<center><h1>This was created using CloudFormation to demonstrate the use of Mappings</h1></center>' > /var/www/html/index.html
+
+  WebServerEIP:
+    Type: AWS::EC2::EIP
+    Properties:
+      InstanceId: !Ref WebServerInstance
+
+  HTTPSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Security group to allow public access on port 80
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 80
+          ToPort: 80
+          CidrIp: 0.0.0.0/0
