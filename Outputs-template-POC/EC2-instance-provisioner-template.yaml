@@ -1,0 +1,25 @@
+Description: Cloudformation template used to provision an EC2 Instance that imports and attaches 2 security groups from another template using the !ImportValue attribute
+
+Resources:
+  WebServerInstance:
+    Type: AWS::EC2::Instance
+    Properties:
+      AvailabilityZone: ap-south-1a
+      ImageId: ami-079b5e5b3971bd10d
+      InstanceType: t2.micro
+      SecurityGroups:
+        - !ImportValue PublicHTTPSecurityGroup
+        - !ImportValue SSHSecurityGroup
+      Tags:
+        - Key: "Name"
+          Value: "WebServerInstance"
+        - Key: "Description"
+          Value: "EC2 Instance created using a Cloudformation template to host a basic HTTP Web server"
+      UserData:
+        Fn::Base64: !Sub |
+          #!/bin/bash
+          yum update -y
+          yum install -y httpd.x86_64
+          systemctl start httpd.service
+          systemctl enable httpd.service
+          echo '<center><h1>This instance is provisioned using Cloudformation and has 2 security groups attached using the !ImportValue attribute</h1></center>' > /var/www/html/index.html
