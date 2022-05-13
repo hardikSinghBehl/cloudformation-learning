@@ -1,0 +1,70 @@
+Description: Cloudformation template that provisions an EC2 Instance and an additional seconday EBS volume store only if the template is being deployed in an 'Production' environment
+
+Parameters:
+  WebServerInstanceAvailabilityZone:
+    Type: String
+    Description: Availability Zone to launch the EC2 instance in
+    AllowedValues:
+      - "ap-south-1a"
+      - "ap-south-1b"
+      - "ap-south-1c"
+    ConstraintDescription: Availability zone must be within the Mumbai (ap-south-1) region
+  Environment:
+    Type: String
+    Description: Environment to run web application in.
+    AllowedValues:
+      - "Development"
+      - "Testing"
+      - "Production"
+  ImageId:
+    Type: AWS::SSM::Parameter::Value<AWS::EC2::Image::Id>
+    Default: /aws/service/ami-amazon-linux-latest/amzn2-ami-hvm-x86_64-gp2
+
+Conditions:
+  RunningInProduction: !Equals [!Ref Environment, Production]
+
+Resources:
+  WebServerInstance:
+    Type: AWS::EC2::Instance
+    Properties:
+      AvailabilityZone: !Ref WebServerInstanceAvailabilityZone
+      ImageId: !Ref ImageId
+      InstanceType: t2.micro
+      SecurityGroups:
+        - !Ref HTTPSecurityGroup
+      Tags:
+        - Key: "Name"
+          Value: !Join ["-", ["WebServerInstance", !Ref Environment]]
+      UserData:
+        Fn::Base64: !Sub |
+          #!/bin/bash
+          yum update -y
+          yum install -y httpd.x86_64
+          systemctl start httpd.service
+          systemctl enable httpd.service
+          echo '<center><h1>This was provisioned using CloudFormation</h1></center>' > /var/www/html/index.html
+
+  SecondaryEBSStorage:
+    Type: AWS::EC2::Volume
+    Condition: RunningInProduction
+    Properties:
+      Size: 20
+      AvailabilityZone: !GetAtt WebServerInstance.AvailabilityZone
+
+  SecondaryEBSStorageAttachment:
+    Type: AWS::EC2::VolumeAttachment
+    Condition: RunningInProduction
+    Properties:
+      InstanceId: !Ref WebServerInstance
+      VolumeId: !Ref SecondaryEBSStorage
+      Device: /dev/sdh
+
+  HTTPSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Security group to allow public access on port 80
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 80
+          ToPort: 80
+          CidrIp: 0.0.0.0/0
