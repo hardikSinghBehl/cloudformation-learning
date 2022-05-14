@@ -10,6 +10,9 @@ Parameters:
       - "ap-south-1b"
       - "ap-south-1c"
     ConstraintDescription: Availability zone must be within the Mumbai (ap-south-1) region
+  KeyPair:
+    Description: Name of an existing EC2 key pair to allow SSH access to the EC2 instance.
+    Type: AWS::EC2::KeyPair::KeyName
 
 Resources:
   WebServerInstance:
@@ -18,8 +21,10 @@ Resources:
       AvailabilityZone: !Ref WebServerInstanceAvailabilityZone
       ImageId: ami-079b5e5b3971bd10d
       InstanceType: t2.micro
+      KeyName: !Ref KeyPair
       SecurityGroups:
         - !Ref HTTPSecurityGroup
+        - !Ref SSHSecurityGroup
       Tags:
         - Key: "Name"
           Value: "WebServerInstance"
@@ -32,7 +37,7 @@ Resources:
           yum install -y httpd.x86_64
           systemctl start httpd.service
           systemctl enable httpd.service
-          echo '<center><h1>This was created using CloudFormation</h1></center>' > /var/www/html/index.html
+          echo '<center><h1>This was created using CloudFormation Stack ${AWS::StackName}</h1></center>' > /var/www/html/index.html
 
   WebServerEIP:
     Type: AWS::EC2::EIP
@@ -48,3 +53,23 @@ Resources:
           FromPort: 80
           ToPort: 80
           CidrIp: 0.0.0.0/0
+      Tags:
+        - Key: Name
+          Value: HTTPSecurityGroup
+        - Key: Description
+          Value: Security group to allow public access on HTTP port 80
+
+  SSHSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Security group to allow SSH access into EC2 instances
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 22
+          ToPort: 22
+          CidrIp: 0.0.0.0/0
+      Tags:
+        - Key: Name
+          Value: SSHSecurityGroup
+        - Key: Description
+          Value: Security group to allow SSH into EC2 instances using port 22
