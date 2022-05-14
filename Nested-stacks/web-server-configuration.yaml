@@ -1,0 +1,47 @@
+Description: |
+  Cloudformation stack to provision an EC2 Server hosting a static webpage on HTTP 80.
+  The security groups being used by the provisioned server are being imported from another nested stack stored in an S3 Bucket whose URL will be provided in the parameter
+
+Parameters:
+  KeyPair:
+    Type: AWS::EC2::KeyPair::KeyName
+    Description: Name of an existing EC2 key pair to allow SSH access to the EC2 instance.
+  ApplicationName:
+    Type: String
+    Description: Name of application being hosted on the EC2 Server
+  SecurityGroupConfigurationTemplateURL:
+    Type: String
+    Description: S3 Object URL of the template containing security group configurations
+
+Resources:
+  WebServerInstance:
+    Type: AWS::EC2::Instance
+    Properties:
+      AvailabilityZone: ap-south-1a
+      ImageId: ami-079b5e5b3971bd10d
+      InstanceType: t2.micro
+      KeyName: !Ref KeyPair
+      SecurityGroups:
+        - !GetAtt SecurityGroupNestedTemplate.Outputs.PublicHTTPSecurityGroup
+        - !GetAtt SecurityGroupNestedTemplate.Outputs.SSHSecurityGroup
+      Tags:
+        - Key: "Name"
+          Value: !Join ["-", ["WebServerInstance", !Ref ApplicationName]]
+        - Key: "Description"
+          Value: "EC2 Instance created using a Cloudformation template to host a basic HTTP Web server"
+      UserData:
+        Fn::Base64: !Sub |
+          #!/bin/bash
+          yum update -y
+          yum install -y httpd.x86_64
+          systemctl start httpd.service
+          systemctl enable httpd.service
+          echo '<center><h1>This was created using CloudFormation Stack ${AWS::StackName}</h1></center>' > /var/www/html/index.html
+
+  SecurityGroupNestedTemplate:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: !Ref SecurityGroupConfigurationTemplateURL
+      TimeoutInMinutes: 2
+      Parameters:
+        ApplicationName: !Ref ApplicationName
