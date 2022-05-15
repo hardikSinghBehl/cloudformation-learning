@@ -1,0 +1,51 @@
+Description: |
+  Cloudformation template that provisions an EC2 Instance hosting a static web application on HTTP Port 80.
+  This template is meant to be region agnostic i.e meant to work in any region
+
+Parameters:
+  ImageId:
+    Type: AWS::SSM::Parameter::Value<AWS::EC2::Image::Id>
+    Default: /aws/service/ami-amazon-linux-latest/amzn2-ami-hvm-x86_64-gp2
+
+Resources:
+  WebServerInstance:
+    Type: AWS::EC2::Instance
+    Properties:
+      AvailabilityZone: !Sub "${AWS::Region}a"
+      ImageId: !Ref ImageId
+      InstanceType: t2.micro
+      SecurityGroups:
+        - !Ref HTTPSecurityGroup
+      Tags:
+        - Key: "Name"
+          Value: "WebServerInstance"
+        - Key: "Description"
+          Value: "EC2 Instance created using a Cloudformation template to host Web application on default HTTP port"
+      UserData:
+        Fn::Base64: |
+          #!/bin/bash
+          yum update -y
+          yum install -y httpd.x86_64
+          systemctl start httpd.service
+          systemctl enable httpd.service
+          echo '<center><h1>This server was provisioned using CloudFormation</h1></center>' > /var/www/html/index.html
+
+  WebServerEIP:
+    Type: AWS::EC2::EIP
+    Properties:
+      InstanceId: !Ref WebServerInstance
+
+  HTTPSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Security group to allow public access on port 80
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 80
+          ToPort: 80
+          CidrIp: 0.0.0.0/0
+      Tags:
+        - Key: Name
+          Value: HTTPSecurityGroup
+        - Key: Description
+          Value: Security group to allow public access on HTTP port 80

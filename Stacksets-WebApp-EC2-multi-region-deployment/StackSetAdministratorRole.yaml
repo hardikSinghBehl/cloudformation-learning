@@ -1,0 +1,28 @@
+Description: |
+  Cloudformation template to create an IAM Role that the administrator account will use to deploy resources on behalf of the target accounts.
+  The role being created will be able to assume the service role present in the target accounts.
+
+Resources:
+  AdministratorRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: StackSetAdministratorRole
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: cloudformation.amazonaws.com
+            Action:
+              - sts:AssumeRole
+      Path: /
+      Policies:
+        - PolicyName: AssumeRole-StackSetExecutorRole
+          PolicyDocument:
+            Version: 2012-10-17
+            Statement:
+              - Effect: Allow
+                Action:
+                  - sts:AssumeRole
+                Resource:
+                  - "arn:*:iam::*:role/StackSetExecutorRole"

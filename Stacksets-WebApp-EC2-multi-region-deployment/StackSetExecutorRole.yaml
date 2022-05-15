@@ -1,0 +1,28 @@
+Description: |
+  Cloudformation to configure a IAM Service role in target accounts/regions and establishing trust relationship with the administrator account
+
+Parameters:
+  AdministratorAccountId:
+    Type: String
+    Description: AWS Account-Id of the administrator account, to establish trust relationship with the service IAM Role in the target account/region
+    MaxLength: 12
+    MinLength: 12
+    ConstraintDescription: Must be a valid 12 digit long AWS Account-ID
+
+Resources:
+  ExecutionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: StackSetExecutorRole
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Principal:
+              AWS:
+                - !Ref AdministratorAccountId
+            Action:
+              - sts:AssumeRole
+      Path: /
+      ManagedPolicyArns:
+        - !Sub arn:${AWS::Partition}:iam::aws:policy/AdministratorAccess
